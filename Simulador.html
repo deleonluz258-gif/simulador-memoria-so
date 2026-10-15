@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Fragmentación de Memoria - Sistemas Operativos</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #cbd5e1;
+            --occupied: #3b82f6;
+            --free: #22c55e;
+            --waste: #ef4444;
+            --internal-block: #f1f5f9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        header h1 {
+            color: #1e3a8a;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: #64748b;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            background-color: #e2e8f0;
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+        }
+
+        .panel {
+            display: none;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        input, button {
+            padding: 10px 14px;
+            font-size: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        button.btn-action {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button.btn-action:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.btn-danger {
+            background-color: var(--waste);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button.btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--primary);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 5px 0;
+            font-size: 13px;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        .stat-card p {
+            margin: 0;
+            font-size: 22px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        /* Estilos específicos Fragmentación Interna */
+        .blocks-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .block-card {
+            background-color: var(--internal-block);
+            border: 2px dashed #94a3b8;
+            border-radius: 8px;
+            padding: 12px;
+            width: 160px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .sub-block-used {
+            background-color: var(--occupied);
+            color: white;
+            font-size: 13px;
+            padding: 6px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+
+        .sub-block-waste {
+            background-color: var(--waste);
+            color: white;
+            font-size: 12px;
+            padding: 4px;
+            margin-top: 4px;
+            border-radius: 4px;
+        }
+
+        /* Estilos específicos Fragmentación Externa */
+        .memory-container {
+            margin-top: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            background: #fafafa;
+        }
+
+        .memory-bar {
+            display: flex;
+            height: 55px;
+            width: 100%;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #64748b;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        .mem-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border-right: 1px solid rgba(255,255,255,0.3);
+            transition: width 0.3s ease;
+        }
+
+        .mem-segment.occupied { background-color: var(--occupied); }
+        .mem-segment.free { background-color: var(--free); color: #0f172a; }
+
+        .process-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 6px;
+        }
+
+        .log-box {
+            background: #0f172a;
+            color: #38bdf8;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 140px;
+            overflow-y: auto;
+            margin-top: 20px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Simulador de Fragmentación de Memoria</h1>
+        <p>Demostración interactiva de conceptos de administración de memoria en Sistemas Operativos</p>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('internal')">1. Fragmentación Interna (Fijas)</button>
+        <button class="tab-btn" onclick="switchTab('external')">2. Fragmentación Externa (Dinámicas)</button>
+    </div>
+
+    <!-- PANEL 1: FRAGMENTACIÓN INTERNA -->
+    <div id="panel-internal" class="panel active">
+        <h2>Particiones Fijas (Paginación / Bloques Estáticos)</h2>
+        <p>La memoria se divide en bloques de un tamaño fijo estipulado. Cuando un proceso ingresa, se le asigna un bloque entero. Si el proceso no utiliza todo el espacio del bloque, ese remanente se desperdicia internamente.</p>
+        
+        <div class="control-group">
+            <div>
+                <label><strong>Tamaño de Bloque Fijo:</strong></label><br>
+                <input type="number" id="fixedBlockSize" value="128" step="16" min="32" style="width: 110px;"> KB
+            </div>
+            <div>
+                <label><strong>Tamaño de Proceso:</strong></label><br>
+                <input type="number" id="procSizeInternal" value="80" min="1" max="1024" style="width: 110px;"> KB
+            </div>
+            <div style="margin-top: 18px;">
+                <button class="btn-action" onclick="addInternalProcess()">Agregar Proceso</button>
+                <button class="btn-danger" onclick="resetInternalMemory()">Reiniciar</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Memoria Total Bloques</h3>
+                <p id="intTotalMem">0 KB</p>
+            </div>
+            <div class="stat-card" style="border-left-color: var(--occupied);">
+                <h3>Memoria Útil Ocupada</h3>
+                <p id="intUsedMem">0 KB</p>
+            </div>
+            <div class="stat-card" style="border-left-color: var(--waste);">
+                <h3>Fragmentación Interna</h3>
+                <p id="intWasteMem">0 KB</p>
+            </div>
+        </div>
+
+        <h3>Bloques Asignados en Memoria:</h3>
+        <div id="internalBlocksContainer" class="blocks-grid">
+            <p style="color: #64748b;">No hay procesos asignados todavía.</p>
+        </div>
+
+        <div id="internalLog" class="log-box">Sistema listo. Agrega procesos para observar el desperdicio interno de memoria.</div>
+    </div>
+
+    <!-- PANEL 2: FRAGMENTACIÓN EXTERNA -->
+    <div id="panel-external" class="panel">
+        <h2>Particiones Dinámicas (Asignación Continua)</h2>
+        <p>La memoria se asigna adaptándose exactamente al tamaño del proceso. Al crear y eliminar procesos constantemente, los espacios libres quedan fragmentados y dispersos. Aunque la suma de memoria libre sea suficiente, si no hay un hueco contiguo continuo lo bastante grande, se produce un fallo por <strong>Fragmentación Externa</strong>.</p>
+        
+        <div class="control-group">
+            <div>
+                <label><strong>Memoria Total SO:</strong></label><br>
+                <input type="text" value="1024 KB" disabled style="width: 90px; background:#e2e8f0;">
+            </div>
+            <div>
+                <label><strong>Nuevo Proceso:</strong></label><br>
+                <input type="number" id="procSizeExternal" value="150" min="10" max="1024" style="width: 110px;"> KB
+            </div>
+            <div style="margin-top: 18px;">
+                <button class="btn-action" onclick="addExternalProcess()">Solicitar Memoria</button>
+                <button class="btn-danger" onclick="resetExternalMemory()">Reiniciar Memoria</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card" style="border-left-color: var(--free);">
+                <h3>Memoria Libre Total</h3>
+                <p id="extFreeMem">1024 KB</p>
+            </div>
+            <div class="stat-card" style="border-left-color: var(--occupied);">
+                <h3>Memoria Ocupada Total</h3>
+                <p id="extUsedMem">0 KB</p>
+            </div>
+        </div>
+
+        <h3>Mapa de Memoria Lineal (1024 KB):</h3>
+        <div class="memory-container">
+            <div id="externalMemoryBar" class="memory-bar">
+                <div class="mem-segment free" style="width: 100%;">LIBRE (1024 KB)</div>
+            </div>
+        </div>
+
+        <h3>Procesos Activos (Haz clic en [Liberar] para probar la coalescencia):</h3>
+        <div id="externalProcessesList" style="margin-top: 10px;">
+            <p style="color: #64748b;">No hay procesos activos en memoria.</p>
+        </div>
+
+        <div id="externalLog" class="log-box">Memoria inicializada con 1024 KB libres en un único bloque continuo.</div>
+    </div>
+</div>
+
+<script>
+    // --- CONTROL DE PESTAÑAS ---
+    function switchTab(tabName) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        
+        if(tabName === 'internal') {
+            document.getElementById('panel-internal').classList.add('active');
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        } else {
+            document.getElementById('panel-external').classList.add('active');
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        }
+    }
+
+    // --- MÓDULO 1: FRAGMENTACIÓN INTERNA ---
+    let internalProcesses = [];
+
+    function addInternalProcess() {
+        const blockSize = parseInt(document.getElementById('fixedBlockSize').value);
+        const procSize = parseInt(document.getElementById('procSizeInternal').value);
+
+        if (isNaN(procSize) || procSize <= 0) {
+            alert("Por favor ingrese un tamaño de proceso válido.");
+            return;
+        }
+        if (procSize > blockSize) {
+            alert(`El proceso (${procSize} KB) es mayor que el tamaño del bloque fijo (${blockSize} KB) y no puede ser alojado en un solo bloque.`);
+            return;
+        }
+
+        internalProcesses.push(procSize);
+        updateInternalUI();
+        document.getElementById('internalLog').innerHTML += `<br>[+] Proceso de ${procSize} KB asignado a un bloque de ${blockSize} KB. Desperdicio interno: ${blockSize - procSize} KB.`;
+    }
+
+    function resetInternalMemory() {
+        internalProcesses = [];
+        updateInternalUI();
+        document.getElementById('internalLog').innerHTML = "Memoria interna restablecida.";
+    }
+
+    function updateInternalUI() {
+        const blockSize = parseInt(document.getElementById('fixedBlockSize').value);
+        const container = document.getElementById('internalBlocksContainer');
+        container.innerHTML = '';
+
+        if (internalProcesses.length === 0) {
+            container.innerHTML = '<p style="color: #64748b;">No hay procesos asignados todavía.</p>';
+        }
+
+        let totalMem = internalProcesses.length * blockSize;
+        let usedMem = 0;
+        let wasteMem = 0;
+
+        internalProcesses.forEach((proc, index) => {
+            let waste = blockSize - proc;
+            usedMem += proc;
+            wasteMem += waste;
+
+            let card = document.createElement('div');
+            card.className = 'block-card';
+            card.innerHTML = `
+                <strong>Bloque #${index + 1}</strong><br>
+                <small style="color:#64748b;">(${blockSize} KB fijos)</small>
+                <div class="sub-block-used">P${index + 1}: ${proc} KB</div>
+                <div class="sub-block-waste">Sobrante: ${waste} KB</div>
+                <button class="btn-danger" style="margin-top: 8px; padding: 2px 8px; font-size: 11px;" onclick="removeInternalProcess(${index})">Eliminar</button>
+            `;
+            container.appendChild(card);
+        });
+
+        document.getElementById('intTotalMem').innerText = totalMem + ' KB';
+        document.getElementById('intUsedMem').innerText = usedMem + ' KB';
+        document.getElementById('intWasteMem').innerText = wasteMem + ' KB';
+    }
+
+    function removeInternalProcess(index) {
+        internalProcesses.splice(index, 1);
+        updateInternalUI();
+        document.getElementById('internalLog').innerHTML += `<br>[-] Bloque #${index + 1} liberado.`;
+    }
+
+
+    // --- MÓDULO 2: FRAGMENTACIÓN EXTERNA ---
+    const TOTAL_MEM_SIZE = 1024;
+    let memorySegments = [
+        { start: 0, size: TOTAL_MEM_SIZE, type: 'free', pid: null }
+    ];
+    let extCounter = 1;
+
+    function resetExternalMemory() {
+        memorySegments = [{ start: 0, size: TOTAL_MEM_SIZE, type: 'free', pid: null }];
+        extCounter = 1;
+        updateExternalUI();
+        document.getElementById('externalLog').innerHTML = "Memoria externa reiniciada: 1024 KB libres contiguos.";
+    }
+
+    function addExternalProcess() {
+        const reqSize = parseInt(document.getElementById('procSizeExternal').value);
+        if (isNaN(reqSize) || reqSize <= 0) {
+            alert("Ingrese un tamaño de proceso válido.");
+            return;
+        }
+
+        // Algoritmo First-Fit (Primer ajuste)
+        let freeIdx = memorySegments.findIndex(seg => seg.type === 'free' && seg.size >= reqSize);
+
+        if (freeIdx === -1) {
+            let totalFree = memorySegments.filter(s => s.type === 'free').reduce((acc, s) => acc + s.size, 0);
+            let log = document.getElementById('externalLog');
+            
+            if (totalFree >= reqSize) {
+                log.innerHTML += `<br><span style="color:#ef4444; font-weight:bold;">[!] FRAGMENTACIÓN EXTERNA DETECTADA: No se pudo alojar un proceso de ${reqSize} KB. Existen ${totalFree} KB libres en total, pero fragmentados en huecos separados sin un bloque contiguo suficiente.</span>`;
+                alert("¡Fragmentación Externa Detectada!\n\nNo existe un bloque contiguo libre suficiente para este proceso, a pesar de que la suma de toda la memoria libre disponible sí supera el tamaño requerido.");
+            } else {
+                log.innerHTML += `<br><span style="color:#ef4444;">[X] Memoria insuficiente (el sistema está completamente lleno o no hay espacio suficiente).</span>`;
+                alert("Memoria insuficiente para este proceso.");
+            }
+            return;
+        }
+
+        let target = memorySegments[freeIdx];
+        let newPid = `P${extCounter++}`;
+        let occupiedSeg = { start: target.start, size: reqSize, type: 'occupied', pid: newPid };
+
+        if (target.size > reqSize) {
+            let remainingFree = { start: target.start + reqSize, size: target.size - reqSize, type: 'free', pid: null };
+            memorySegments.splice(freeIdx, 1, occupiedSeg, remainingFree);
+        } else {
+            memorySegments.splice(freeIdx, 1, occupiedSeg);
+        }
+
+        updateExternalUI();
+        document.getElementById('externalLog').innerHTML += `<br>[+] Proceso ${newPid} de ${reqSize} KB asignado correctamente.`;
+    }
+
+    function removeExternalProcess(pid) {
+        let segIdx = memorySegments.findIndex(s => s.pid === pid);
+        if (segIdx === -1) return;
+
+        memorySegments[segIdx].type = 'free';
+        memorySegments[segIdx].pid = null;
+
+        // Coalescencia: Fusionar espacios libres contiguos automáticamente
+        let merged = [];
+        for (let i = 0; i < memorySegments.length; i++) {
+            let current = memorySegments[i];
+            if (merged.length > 0 && merged[merged.length - 1].type === 'free' && current.type === 'free') {
+                merged[merged.length - 1].size += current.size;
+            } else {
+                merged.push({ ...current });
+            }
+        }
+        memorySegments = merged;
+
+        updateExternalUI();
+        document.getElementById('externalLog').innerHTML += `<br>[-] Proceso ${pid} liberado. Memoria fusionada (coalescencia aplicada).`;
+    }
+
+    function updateExternalUI() {
+        const bar = document.getElementById('externalMemoryBar');
+        const listContainer = document.getElementById('externalProcessesList');
+        bar.innerHTML = '';
+        listContainer.innerHTML = '';
+
+        let totalUsed = 0;
+        let totalFree = 0;
+
+        memorySegments.forEach(seg => {
+            let pct = (seg.size / TOTAL_MEM_SIZE) * 100;
+            
+            // Renderizar barra gráfica
+            let div = document.createElement('div');
+            div.className = `mem-segment ${seg.type}`;
+            div.style.width = pct + '%';
+            div.innerText = seg.type === 'occupied' ? `${seg.pid} (${seg.size}K)` : `LIBRE (${seg.size}K)`;
+            bar.appendChild(div);
+
+            if (seg.type === 'occupied') {
+                totalUsed += seg.size;
+                let item = document.createElement('div');
+                item.className = 'process-list-item';
+                item.innerHTML = `
+                    <span><strong>Proceso ${seg.pid}</strong> — Tamaño: <strong>${seg.size} KB</strong> (Rango: ${seg['start']} - ${seg['start'] + seg['size']} KB)</span>
+                    <button class="btn-danger" style="padding: 4px 10px; font-size: 12px;" onclick="removeExternalProcess('${seg.pid}')">Liberar</button>
+                `;
+                listContainer.appendChild(item);
+            } else {
+                totalFree += seg.size;
+            }
+        });
+
+        if (totalUsed === 0) {
+            listContainer.innerHTML = '<p style="color: #64748b;">No hay procesos activos en memoria.</p>';
+        }
+
+        document.getElementById('extFreeMem').innerText = totalFree + ' KB';
+        document.getElementById('extUsedMem').innerText = totalUsed + ' KB';
+    }
+
+    // Inicializar vistas por defecto
+    updateInternalUI();
+    updateExternalUI();
+</script>
+
+</body>
+</html>
